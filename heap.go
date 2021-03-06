@@ -30,4 +30,3 @@ func (h *myheap) Pop() interface{} {
 func (h *myheap) Push(x interface{}) {
 	*h = append(*h, x.(kv))
 }
-
