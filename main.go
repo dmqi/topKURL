@@ -12,9 +12,9 @@ import (
 )
 
 const K = 100
-const N = 50 // 测试文件大小为10G, 分成50份
+const N = 100 // 测试文件大小为1G, 分成50份
 
-const Debug = 1
+const Debug = 0
 
 func DPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug > 0 {
@@ -41,11 +41,11 @@ func prepare() {
 	}
 }
 
-func ReadFile(filePath string, handle func(string)) {
+func ReadFile(filePath string) {
 	f, err := os.Open(filePath)
 	defer f.Close()
 	if err != nil {
-		fmt.Println(err.Error)
+		fmt.Printf("Error: %s\n", err)
 		return
 	}
 	buf := bufio.NewReader(f)
@@ -59,13 +59,9 @@ func ReadFile(filePath string, handle func(string)) {
 			fmt.Printf("Error: %s\n", err)
 			return
 		}
-		handle(string(line))
+		i := ihash(string(line))
+		hashCh[i] <- string(line)
 	}
-}
-
-func send(s string) {
-	i := ihash(s)
-	hashCh[i] <- s
 }
 
 func WriteFile() {
@@ -81,6 +77,7 @@ func WriteFile() {
 		wait.Add(1)
 		go func(x int) {
 			defer wait.Done()
+			defer close(hashCh[x])
 			for {
 				v, ok := <- hashCh[x]
 				// DPrintf("receive data")
@@ -141,8 +138,8 @@ func MapAll() {
 func process() {
 	for i := 0; i < len(heaps); i ++ {
 		for heaps[i].Len() > 0 {
-			kv := heap.Pop(heaps[i]).(kv)
-			heap.Push(h, kv)
+			kv_ := heap.Pop(heaps[i]).(kv)
+			heap.Push(h, kv_)
 			if h.Len() > 100 {
 				heap.Pop(h)
 			}
@@ -156,9 +153,9 @@ func process() {
 
 func main() {
 	prepare()
-	go ReadFile("10gb", send)
+	go ReadFile("1gb") // 并发读写
 	WriteFile()
-	MapAll()
+	MapAll() 
 	process()
 }
 
